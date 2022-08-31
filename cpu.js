@@ -8,7 +8,8 @@ class CPU {
 		this.registerNames = [
 		'ip', 'acc',
 		'r1', 'r2', 'r3', 'r4',
-		'r5', 'r6', 'r7', 'r8'
+		'r5', 'r6', 'r7', 'r8',
+		'sp', 'fp'
 		];
 
 		this.registers = createMemory(this.registerNames.length * 2);
@@ -17,6 +18,9 @@ class CPU {
 			map[name] = i * 2;
 			return map;
 		}, {});
+
+		this.setRegister('sp', memory.byteLength - 1 - 1);
+		this.setRegister('sp', memory.byteLength - 1 - 1);
 	}
 
 	debug(){
@@ -62,21 +66,38 @@ class CPU {
 		return instruction;
 	}
 
+	push(value){
+		const spAddress = this.getRegister('sp');
+		this.memory.setUint16(spAddress, value);
+		this.setRegister('sp', spAddress - 2);
+	}
+
+	fetchRegisterIndex(){
+		return (this.fetch() % this.registerNames.length) * 2;
+	}
+
+	pop(){
+		const nextSpAddress = this.getRegister('sp') + 2;
+		this.setRegister('sp', nextSpAddress);
+		return this.memory.getUint16(nextSpAddress);
+		 
+	}
+
 	execute(instruction){
 		switch (instruction){
 
 			//Move literal into register
 			case instructions.MOV_LIT_REG: {
 				const literal = this.fetch16();
-				const register = (this.fetch() % this.registerNames.length)*2;
+				const register = this.fetchRegisterIndex();
 				this.registers.setUint16(register, literal);
 				return;
 			}
 
 			//Move register to register
 			case instructions.MOV_REG_REG: {
-				const registerFrom = (this.fetch() % this.registerNames.length) * 2;
-				const registerTo = (this.fetch() % this.registerNames.length) *2;
+				const registerFrom = this.fetchRegisterIndex();
+				const registerTo = this.fetchRegisterIndex();
 				const value = this.registers.getUint16(registerFrom);
 				this.registers.setUint16(registerTo, value);
 				return;
@@ -84,7 +105,7 @@ class CPU {
 
 			//Move register to memory
 			case instructions.MOV_REG_MEM: {
-				const registerFrom = (this.fetch() % this.registerNames.length)*2;
+				const registerFrom = this.fetchRegisterIndex();
 				const address = this.fetch16();
 				const value = this.registers.getUint16(registerFrom);
 				this.memory.setUint16(address, value);
@@ -94,7 +115,7 @@ class CPU {
 			//Move memory to register
 			case instructions.MOV_MEM_REG: {
 				const address = this.fetch16();
-				const registerTo = (this.fetch() % this.registerNames.length)*2;
+				const registerTo = this.fetchRegisterIndex();
 				const value = this.memory.getUint16(address);
 				this.registers.setUint16(registerTo, value);
 				return;
@@ -102,8 +123,8 @@ class CPU {
 
 			//Add register to register
 			case instructions.ADD_REG_REG: {
-				const r1 = this.fetch();
-				const r2 = this.fetch();
+				const r1 = this.fetchRegisterIndex();
+				const r2 = this.fetchRegisterIndex();
 				const registerValue1 = this.registers.getUint16(r1 * 2);
 				const registerValue2 = this.registers.getUint16(r2 * 2);
 				this.setRegister('acc', registerValue1 + registerValue2);
@@ -118,6 +139,25 @@ class CPU {
 					this.setRegister('ip', address);
 				}
 
+				return;
+			}
+
+			case instructions.PSH_LIT: {
+				const value = this.fetch16();
+				this.push(value);
+				return;
+			}
+
+			case instructions.PSH_REG:{
+				const registerIndex = this.fetchRegisterIndex();
+				this.push(this.registers.fetUint16(registerIndex));
+				return;
+			}
+
+			case instructions.POP: {
+				const registerIndex = this.fetchRegisterIndex();
+				const value = this.pop();
+				this.registers.setUint16(registerIndex, value);
 				return;
 			}
 		}

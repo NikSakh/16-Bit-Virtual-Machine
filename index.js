@@ -7,6 +7,14 @@ const IP = 0;
 const ACC = 1;
 const R1 = 2;
 const R2 = 3;
+const R3 = 4;
+const R4 = 5;
+const R5 = 6;
+const R6 = 7;
+const R7 = 8;
+const R8 = 9;
+const SP = 10;
+const FP = 11;
 
 const memory = createMemory(256*256);
 const writableBytes = new Uint8Array(memory.buffer);
